@@ -13,7 +13,7 @@ from flask import Flask, jsonify
 #################################################
 # Database Setup
 #################################################
-engine = create_engine("sqlite:///hawaii.sqlite")
+engine = create_engine("sqlite:///Resources/hawaii.sqlite")
 
 # reflect an existing database into a new model
 Base = automap_base()
@@ -45,11 +45,11 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start><br/>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/start<br/>"
+        f"/api/v1.0/start/end<br/>"
     )
 
-@app.route("api/v1.0/precipitation")
+@app.route("/api/v1.0/precipitation")
 def precipitation():
 
     """Return list of precipitation information"""
@@ -86,10 +86,37 @@ def tobs():
 
     """Return Dates and temperature observations of most active station"""
 
-    results = temperature = session.query(Measurement.tobs).where(Measurement.date >= date, Measurement.station == station_num).all()
+    results = temperature = session.query(Measurement.date, Measurement.tobs).where(Measurement.date >= date, Measurement.station == station_num).all()
 
     session.close()
 
     all_tobs = list(np.ravel(results))
 
     return jsonify(all_tobs)
+
+
+@app.route("/api/v1.0/<start>")
+def start_date(start):
+    date = dt.datetime.strptime(start, "%m-%d-%Y")
+
+    results = session.query(func.max(Measurement.tobs), func.min(Measurement.tobs), func.avg(Measurement.tobs)).where(Measurement.date >= date).all()
+
+    session.close()
+
+    measure_temps = list(np.ravel(results))
+
+    return jsonify(measure_temps)
+
+@app.route("/api/v1.0/<start>/<end>")
+def start_end_date(start, end):
+    start_date = dt.datetime.strptime(start, "%m-%d-%Y")
+    end_date = dt.datetime.strptime(end, "%m-%d-%Y")
+
+    results = session.query(func.max(Measurement.tobs), func.min(Measurement.tobs), func.avg(Measurement.tobs)).where(Measurement.date >= start_date, Measurement.date <=end_date).all()
+
+    measure_temps = list(np.ravel(results))
+
+    return jsonify(measure_temps)
+
+if __name__ == '__main__':
+    app.run(debug=True)
